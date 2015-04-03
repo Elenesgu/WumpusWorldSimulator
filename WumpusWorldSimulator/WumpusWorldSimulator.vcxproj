@@ -10,6 +10,25 @@
       <Platform>Win32</Platform>
     </ProjectConfiguration>
   </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="Action.cpp" />
+    <ClCompile Include="Agent.cpp" />
+    <ClCompile Include="Location.cpp" />
+    <ClCompile Include="Orientation.cpp" />
+    <ClCompile Include="Percept.cpp" />
+    <ClCompile Include="wumpsim.cpp" />
+    <ClCompile Include="WumpusWorld.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Action.h" />
+    <ClInclude Include="Agent.h" />
+    <ClInclude Include="Location.h" />
+    <ClInclude Include="Orientation.h" />
+    <ClInclude Include="Percept.h" />
+    <ClInclude Include="WorldState.h" />
+    <ClInclude Include="wumpsim.h" />
+    <ClInclude Include="WumpusWorld.h" />
+  </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{4FA071BE-DCB3-4839-B6FC-F27B4BBF1F7F}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
@@ -75,8 +94,6 @@
       <OptimizeReferences>true</OptimizeReferences>
     </Link>
   </ItemDefinitionGroup>
-  <ItemGroup>
-  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
