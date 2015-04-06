@@ -13,10 +13,10 @@
 
 typedef std::vector<std::vector<MapState>> MapData;
 
-const long long upperBound = 2147483648;
+const long long upperBound = 2147483648i64;
 
-struct AstarAlgo{
-	bool answer;
+class AstarAlgo{
+private:
 	struct Node{
 		int x, y;
 		int parentIndex, index;
@@ -36,6 +36,9 @@ struct AstarAlgo{
 			cost = obj.cost;
 		}
 	};
+public:
+	bool answer;
+	pair<int, int> Dest;
 	std::function<int(const MapData&, int, int)> HeuristicFunc;
 	std::vector<Node> Graph;
 	std::vector<Node> Candidates;
@@ -57,7 +60,6 @@ class Agent {
 private:
 	AstarAlgo Algorithm;
 	MapData mapdata;
-	pair<int, int> Dest;
 public:
 	Agent ();
 	~Agent ();

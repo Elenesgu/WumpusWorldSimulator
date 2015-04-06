@@ -1,11 +1,13 @@
 // Agent.cpp
 
-#include <iostream>
-#include <memory>
+
 #include <array>
 #include <functional>
-#include <utility>
+#include <iostream>
+#include <memory>
 #include <queue>
+#include <stack>
+#include <utility>
 #include <vector>
 #include "Agent.h"
 
@@ -31,13 +33,13 @@ void Agent::Initialize(int worldSize, MapState* map) {
 		for (int col = 0; col < worldSize; col++) {
 			mapdata[row][col] = *map;
 			if (*map == GOLD) {
-				Dest.first = row;
-				Dest.second = col;
+				Algorithm.Dest.first = row;
+				Algorithm.Dest.second = col;
 			}
 			if (*map == PIT_GOLD || *map == PIT_WUMPUS_GOLD) {
 				Algorithm.answer = false;
 			}
-			map++;			
+			map++;
 		}
 	}
 	if (Algorithm.answer) {
@@ -56,7 +58,6 @@ Action Agent::Process (Percept& percept) {
 }
 
 void Agent::GameOver (int score) {
-
 }
 
 #pragma region A*Algorithm
@@ -83,7 +84,7 @@ void AstarAlgo::Compute(const MapData& mapdata, const AstarAlgo::Node& curNode) 
 	}
 	auto checkvalid = [this](Node& obj) {
 		if (obj.x >= 0 && obj.y >= 0 &&
-			obj.x < isAccessed.size() && isAccessed.size()) {
+			obj.x < isAccessed.size() && obj.y < isAccessed.size()) {
 			return true;
 		}
 		return false;
@@ -95,14 +96,18 @@ void AstarAlgo::Compute(const MapData& mapdata, const AstarAlgo::Node& curNode) 
 			newNode.x = n.x + i;
 			newNode.y = n.y;
 			newNode.parentIndex = n.index;
-			if (checkvalid(newNode) && isAccessed[newNode.x][newNode.y] == false) {
-				this->Candidates.push_back(newNode);
+			if (checkvalid(newNode)) {
+				if (isAccessed[newNode.x][newNode.y] == false) {
+					this->Candidates.push_back(newNode);
+				}
 			}
 			newNode.x = n.x;
 			newNode.y = n.y + i;
 			newNode.parentIndex = n.index;
-			if (checkvalid(newNode) && isAccessed[newNode.x][newNode.y] == false) {
-				this->Candidates.push_back(newNode);
+			if (checkvalid(newNode)) {
+				if (isAccessed[newNode.x][newNode.y] == false) {
+					this->Candidates.push_back(newNode);
+				}
 			}
 		}
 	});
@@ -132,6 +137,13 @@ void AstarAlgo::MakeAction() {
 		ActionQue.push(CLIMB);
 		return;
 	}
+	std::stack<Node> Path;
+	Node cur = Graph.back();
+	while (cur.parentIndex != -1) {
+		Path.push(cur);
+		cur = Graph[cur.parentIndex];
+	}
+	Graph.clear();
 
 }
 
