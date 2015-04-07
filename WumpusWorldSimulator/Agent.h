@@ -15,6 +15,8 @@ typedef std::vector<std::vector<MapState>> MapData;
 
 const long long upperBound = 2147483648i64;
 
+enum mOrient { N, R, L, U };
+
 class AstarAlgo{
 private:
 	struct Node{
@@ -38,7 +40,7 @@ private:
 	};
 public:
 	bool answer;
-	pair<int, int> Dest;
+	std::pair<int, int> Dest;
 	std::function<int(const MapData&, int, int)> HeuristicFunc;
 	std::vector<Node> Graph;
 	std::vector<Node> Candidates;
@@ -46,7 +48,7 @@ public:
 	std::queue<Action> ActionQue;
 	void Compute(const MapData& mapdata);
 	void Compute(const MapData& mapdata,const Node& curNode);
-	void MakeAction();
+	void MakeAction(const MapData& mapdata);
 	Action operator() (const MapData& mapdata,
 		std::function<int(const MapData&)> HeuristicFunc);
 };

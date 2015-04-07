@@ -2,6 +2,7 @@
 
 
 #include <array>
+#include <exception>
 #include <functional>
 #include <iostream>
 #include <memory>
@@ -10,6 +11,7 @@
 #include <utility>
 #include <vector>
 #include "Agent.h"
+#include "Orientation.h"
 
 using namespace std;
 
@@ -45,12 +47,14 @@ void Agent::Initialize(int worldSize, MapState* map) {
 	if (Algorithm.answer) {
 		Algorithm.Compute(mapdata);
 	}
-	Algorithm.MakeAction();
+	Algorithm.MakeAction(mapdata);
 }
 
 
 Action Agent::Process (Percept& percept) {
 	Action action;
+	action = Algorithm.ActionQue.front();
+	Algorithm.ActionQue.pop();
 	//TO DO
 	int n;
 	cin >> n;
@@ -132,19 +136,79 @@ void AstarAlgo::Compute(const MapData& mapdata, const AstarAlgo::Node& curNode) 
 	Compute(mapdata, *minNode);
 }
 
-void AstarAlgo::MakeAction() {
+void AstarAlgo::MakeAction(const MapData& mapdata) {
+	mOrient table[16] = {N, U, L, R,
+		U, N, R, L,
+		R, L, N, U,
+		L, R, U, N
+	};
+	auto calcAction = [this, &table, &mapdata](const Node& source, const Node& target, Orientation& curOrient) {
+		auto calcOrient = [](const Node& source, const Node& target) {
+			if (source.x == target.x) {
+				if (target.y == source.y + 1) {
+					return RIGHT;
+				}
+				else if (target.y == source.y - 1) {
+					return LEFT;
+				}
+				else {
+					throw std::invalid_argument("Not valid movement");
+				}
+			}
+			else if (source.y == target.y){
+				if (target.x == source.x + 1) {
+					return UP;
+				}
+				else if (target.x == source.x - 1) {
+					return DOWN;
+				}
+				else {
+					throw std::invalid_argument("Not valid movemnet");
+				}
+			}
+			else {
+				throw std::invalid_argument("Not valid movement");
+			}
+		};
+		auto targetOrinet = calcOrient(source, target);
+		switch (table[curOrient * 4 + targetOrinet]) {
+		case N:
+			break;
+		case U:
+			ActionQue.push(TURNLEFT); ActionQue.push(TURNLEFT); break;
+		case L:
+			ActionQue.push(TURNLEFT); break;
+		case R:
+			ActionQue.push(TURNRIGHT); break;
+		}
+		curOrient = targetOrinet;
+		if (mapdata[target.x][target.y] == WUMPUS || mapdata[target.x][target.y] == WUMPUS_GOLD) {
+			ActionQue.push(SHOOT);
+		}
+		ActionQue.push(FORWARD);
+	};
+
 	if (!answer) {
 		ActionQue.push(CLIMB);
 		return;
 	}
-	std::stack<Node> Path;
+	std::vector<Node> Path;
 	Node cur = Graph.back();
 	while (cur.parentIndex != -1) {
-		Path.push(cur);
+		Path.push_back(cur);
 		cur = Graph[cur.parentIndex];
 	}
+	Path.push_back(cur);
+	Orientation curOrient = RIGHT;
+	for (int index = Path.size() - 2; index >= 0; index--) {
+		calcAction(Path[index + 1], Path[index], curOrient);
+	}
+	ActionQue.push(GRAB);
+	for (int index = 0; index < Path.size() - 1; index++) {
+		calcAction(Path[index], Path[index + 1], curOrient);
+	}
+	ActionQue.push(CLIMB);
 	Graph.clear();
-
 }
 
 Action AstarAlgo::operator() (const MapData& mapdata
