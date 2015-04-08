@@ -1,6 +1,5 @@
 // Agent.cpp
 
-
 #include <array>
 #include <exception>
 #include <functional>
@@ -49,7 +48,6 @@ void Agent::Initialize(int worldSize, MapState* map) {
 
 
 Action Agent::Process (Percept& percept) {
-	Action action;
 #ifdef _DEBUG
 	int n;
 	cin >> n;
@@ -115,7 +113,7 @@ void AstarAlgo::Compute(const MapData& mapdata, const AstarAlgo::Node& curNode, 
 	Node* minNode = nullptr;
 	long long minCost = upperBound;
 	for_each(Candidates.begin(), Candidates.end(), [this, &minNode, &mapdata, &minCost](Node& n) {
-		n.cost = Graph[n.parentIndex].cost + HeuristicFunc(mapdata, n.x, n.y);
+		n.cost = Graph[n.parentIndex].cost + HeuristicFunc(mapdata, std::make_pair(n.x, n.y));
 		if (mapdata[n.x][n.y] == PIT || mapdata[n.x][n.y] == PIT_WUMPUS) {
 			n.cost += upperBound;
 		}
@@ -189,7 +187,7 @@ void AstarAlgo::MakeAction(const MapData& mapdata) {
 		ActionQue.push(CLIMB);
 		return;
 	}
-	Compute(mapdata, std::pair<int, int>(0,0),Dest);
+	Compute(mapdata, std::make_pair<int, int>(0,0),Dest);
 	std::vector<Node> Path;
 	Node cur = Graph.back();
 	while (cur.parentIndex != -1) {
@@ -204,7 +202,7 @@ void AstarAlgo::MakeAction(const MapData& mapdata) {
 	ActionQue.push(GRAB);
 
 	//Back route
-	Compute(mapdata, Dest, std::pair<int, int>(0, 0));
+	Compute(mapdata, Dest, std::make_pair<int, int>(0, 0));
 	Path.clear();
 	cur = Graph.back();
 	while (cur.parentIndex != -1) {
@@ -225,7 +223,7 @@ Action AstarAlgo::operator() (const MapData& mapdata,
 	return action;
 }
 
-int Heuristic::Zero(const MapData& mapdata, int x, int y) {
+int Heuristic::Zero(const MapData& mapdata, pair<int, int> coord) {
 	return 0;
 }
 

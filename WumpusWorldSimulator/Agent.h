@@ -20,7 +20,8 @@ enum mOrient { N, R, L, U };
 class AstarAlgo{
 private:
 	struct Node{
-		int x, y;
+		int x;
+		int y;
 		int parentIndex, index;
 		long long cost;
 		Node() {
@@ -41,7 +42,7 @@ private:
 public:
 	bool answer;
 	std::pair<int, int> Dest;
-	std::function<int(const MapData&, int, int)> HeuristicFunc;
+	std::function<int(const MapData&, pair<int, int>)> HeuristicFunc;
 	std::vector<Node> Graph;
 	std::vector<Node> Candidates;
 	std::vector<std::vector<bool>> isAccessed;
@@ -54,8 +55,8 @@ public:
 };
 
 namespace Heuristic {
-	int Zero(const MapData& mapdata, int x, int y);
-	int Distance(const MapData& mapdata, int x, int y);
+	int Zero(const MapData& mapdata, pair<int, int> coord);
+	int Distance(const MapData& mapdata, pair<int, int> coord);
 }
 
 class Agent {	
