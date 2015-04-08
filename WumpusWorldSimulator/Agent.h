@@ -46,11 +46,11 @@ public:
 	std::vector<Node> Candidates;
 	std::vector<std::vector<bool>> isAccessed;
 	std::queue<Action> ActionQue;
-	void Compute(const MapData& mapdata);
-	void Compute(const MapData& mapdata,const Node& curNode);
+	void Compute(const MapData& mapdata, std::pair<int, int> start, std::pair<int,int> target);
+	void Compute(const MapData& mapdata, const Node& curNode, std::pair<int, int> target);
 	void MakeAction(const MapData& mapdata);
 	Action operator() (const MapData& mapdata,
-		std::function<int(const MapData&)> HeuristicFunc);
+		Percept& percept);
 };
 
 namespace Heuristic {

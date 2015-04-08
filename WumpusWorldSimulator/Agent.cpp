@@ -44,21 +44,17 @@ void Agent::Initialize(int worldSize, MapState* map) {
 			map++;
 		}
 	}
-	if (Algorithm.answer) {
-		Algorithm.Compute(mapdata);
-	}
 	Algorithm.MakeAction(mapdata);
 }
 
 
 Action Agent::Process (Percept& percept) {
 	Action action;
-	action = Algorithm.ActionQue.front();
-	Algorithm.ActionQue.pop();
-	//TO DO
+#ifdef _DEBUG
 	int n;
 	cin >> n;
-	return action;
+#endif
+	return Algorithm(mapdata, percept);
 }
 
 void Agent::GameOver (int score) {
@@ -66,24 +62,25 @@ void Agent::GameOver (int score) {
 
 #pragma region A*Algorithm
 
-void AstarAlgo::Compute(const MapData& mapdata) {
+void AstarAlgo::Compute(const MapData& mapdata, std::pair<int, int> start, std::pair<int, int> target) {
 	isAccessed = std::vector<std::vector<bool>>(mapdata.size(),
 		std::vector<bool>(mapdata.size(), false));
+	Graph.clear();
 	Node headNode;
-	headNode.x = 0;
-	headNode.y = 0;
+	headNode.x = start.first;
+	headNode.y = start.second;
 	headNode.parentIndex = -1;
 	headNode.index = 0;
 	headNode.cost = 0;
 	Graph.push_back(headNode);
-	Compute(mapdata, Graph[0]);
+	Compute(mapdata, Graph[0], target);
 }
 
 //Recursive Call for A* algorithm
-void AstarAlgo::Compute(const MapData& mapdata, const AstarAlgo::Node& curNode) {
+void AstarAlgo::Compute(const MapData& mapdata, const AstarAlgo::Node& curNode, std::pair<int, int> target) {
 	isAccessed[curNode.x][curNode.y] = true;
 	Candidates.clear();
-	if (mapdata[curNode.x][curNode.y] == GOLD) {
+	if (curNode.x == target.first && curNode.y == target.second) {
 		return;
 	}
 	auto checkvalid = [this](Node& obj) {
@@ -133,7 +130,7 @@ void AstarAlgo::Compute(const MapData& mapdata, const AstarAlgo::Node& curNode) 
 	}
 	minNode->index = Graph.size();
 	Graph.push_back(*minNode);
-	Compute(mapdata, *minNode);
+	Compute(mapdata, *minNode, target);
 }
 
 void AstarAlgo::MakeAction(const MapData& mapdata) {
@@ -192,6 +189,7 @@ void AstarAlgo::MakeAction(const MapData& mapdata) {
 		ActionQue.push(CLIMB);
 		return;
 	}
+	Compute(mapdata, std::pair<int, int>(0,0),Dest);
 	std::vector<Node> Path;
 	Node cur = Graph.back();
 	while (cur.parentIndex != -1) {
@@ -204,18 +202,27 @@ void AstarAlgo::MakeAction(const MapData& mapdata) {
 		calcAction(Path[index + 1], Path[index], curOrient);
 	}
 	ActionQue.push(GRAB);
-	for (int index = 0; index < Path.size() - 1; index++) {
-		calcAction(Path[index], Path[index + 1], curOrient);
+
+	//Back route
+	Compute(mapdata, Dest, std::pair<int, int>(0, 0));
+	Path.clear();
+	cur = Graph.back();
+	while (cur.parentIndex != -1) {
+		Path.push_back(cur);
+		cur = Graph[cur.parentIndex];
+	}
+	Path.push_back(cur);
+	for (int index = Path.size() - 2; index >= 0; index--) {
+		calcAction(Path[index + 1], Path[index], curOrient);
 	}
 	ActionQue.push(CLIMB);
-	Graph.clear();
 }
 
-Action AstarAlgo::operator() (const MapData& mapdata
-	, std::function<int(const MapData&)> HeuristicFunc) {
-
-
-	return TURNLEFT;
+Action AstarAlgo::operator() (const MapData& mapdata,
+	Percept& percept) {
+	Action action = ActionQue.front();
+	ActionQue.pop();
+	return action;
 }
 
 int Heuristic::Zero(const MapData& mapdata, int x, int y) {
