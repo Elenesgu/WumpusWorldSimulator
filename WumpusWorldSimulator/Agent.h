@@ -5,6 +5,7 @@
 
 #include "Action.h"
 #include "Percept.h"
+#include "Orientation.h"
 #include <array>
 #include <functional>
 #include <utility>
@@ -13,6 +14,7 @@
 
 typedef std::vector<std::vector<MapState>> MapData;
 
+//upperBound is INT_MAX+1 (64bit integer data type must be needed)
 const long long upperBound = 2147483648i64;
 
 enum mOrient { N, R, L, U };
@@ -23,6 +25,7 @@ private:
 		int x;
 		int y;
 		int parentIndex, index;
+		Orientation or;
 		long long cost;
 		Node() {
 			x = -1;
@@ -30,6 +33,7 @@ private:
 			parentIndex = -1;
 			index = -1;
 			cost = -1;
+			or = RIGHT;
 		}
 		Node(const Node& obj) {
 			x = obj.x;
@@ -37,17 +41,21 @@ private:
 			parentIndex = obj.parentIndex;
 			index = obj.index;
 			cost = obj.cost;
+			or = obj.or;
 		}
 	};
 public:
 	bool answer;
 	std::pair<int, int> Dest;
-	std::function<int(const MapData&, pair<int, int>)> HeuristicFunc;
+	//For a*algorithm
+	std::function<int(const MapData&, pair<int, int>, const pair<int, int>&)> HeuristicFunc;
 	std::vector<Node> Graph;
 	std::vector<Node> Candidates;
 	std::vector<std::vector<bool>> isAccessed;
+	//----------------
 	std::queue<Action> ActionQue;
-	void Compute(const MapData& mapdata, std::pair<int, int> start, std::pair<int,int> target);
+	Orientation calcOrient(const Node& source, const Node& target);
+	void Compute(const MapData& mapdata, std::pair<int, int> start, std::pair<int,int> target, Orientation initorient);
 	void Compute(const MapData& mapdata, const Node& curNode, std::pair<int, int> target);
 	void MakeAction(const MapData& mapdata);
 	Action operator() (const MapData& mapdata,
@@ -55,8 +63,10 @@ public:
 };
 
 namespace Heuristic {
-	int Zero(const MapData& mapdata, pair<int, int> coord);
-	int Distance(const MapData& mapdata, pair<int, int> coord);
+	//int(const Mapdata&, pair<int, int>)
+	int Zero(const MapData& mapdata, pair<int, int> coord, const pair<int, int>& dest);
+	int MDistance(const MapData& mapdata, pair<int, int> coord, const pair<int, int>& dest);
+	int CostBase(const MapData& mapdata, pair<int, int> coord, const pair<int, int>& dest);
 }
 
 class Agent {	
