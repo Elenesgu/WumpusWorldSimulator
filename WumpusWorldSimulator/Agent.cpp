@@ -18,9 +18,9 @@
 #endif
 
 Agent::Agent () {
-	Algorithm.HeuristicFunc = Heuristic::Zero;
-	// Algorithm.HeuristicFunc = Heuristic::MDistance;
-	// Algorithm.HeuristicFunc = Heuristic::CostBase;
+	//Algorithm.HeuristicFunc = Heuristic::Zero;
+	//Algorithm.HeuristicFunc = Heuristic::MDistance;
+	Algorithm.HeuristicFunc = Heuristic::CostBase;
 	Algorithm.answer = true;
 }
 
@@ -127,7 +127,8 @@ void AstarAlgo::Compute(const MapData& mapdata, const AstarAlgo::Node& curNode, 
 	Node* minNode = nullptr;
 	long long minCost = upperBound;
 	for_each(Candidates.begin(), Candidates.end(), [this, &minNode, &mapdata, &minCost, &target](Node& n) {
-		n.cost = Graph[n.parentIndex].cost + HeuristicFunc(mapdata, std::make_pair(n.x, n.y), target);
+		n.or = calcOrient(Graph[n.parentIndex], n);
+		n.cost = Graph[n.parentIndex].cost + HeuristicFunc(mapdata, n, target);
 		if (mapdata[n.x][n.y] == PIT || mapdata[n.x][n.y] == PIT_WUMPUS) {
 			n.cost += upperBound;
 		}
@@ -141,7 +142,6 @@ void AstarAlgo::Compute(const MapData& mapdata, const AstarAlgo::Node& curNode, 
 		return;
 	}
 	minNode->index = Graph.size();
-	minNode->or = calcOrient(Graph[minNode->parentIndex], *minNode);
 	Graph.push_back(*minNode);
 	Compute(mapdata, *minNode, target);
 }
@@ -246,20 +246,28 @@ Action AstarAlgo::operator() (const MapData& mapdata,
 
 //Below is Heuristic functions.
 
-int Heuristic::Zero(const MapData& mapdata, pair<int, int> coord, const pair<int, int>& dest) {
+int Heuristic::Zero(const MapData& mapdata, const AstarAlgo::Node& coord, const pair<int, int>& dest) {
 	return 0;
 }
 
-int Heuristic::MDistance(const MapData& mapdata, pair<int, int> coord, const pair<int, int>& dest) {
-	return std::abs(dest.first - coord.first) + std::abs(dest.second - coord.second);
+int Heuristic::MDistance(const MapData& mapdata, const AstarAlgo::Node& coord, const pair<int, int>& dest) {
+	return std::abs(dest.first - coord.x) + std::abs(dest.second - coord.y);
 }
 
-int Heuristic::CostBase(const MapData& mapdata, pair<int, int> coord, const pair<int, int>& dest) {
-	int result;
-	if (mapdata[coord.first][coord.second] == WUMPUS) {
+int Heuristic::CostBase(const MapData& mapdata, const AstarAlgo::Node& coord, const pair<int, int>& dest) {
+	int result = 0;
+
+	if (mapdata[coord.x][coord.y] == WUMPUS) {
 		result += 10;
 	}
-	return 0;
+	result += Heuristic::MDistance(mapdata, coord, dest);
+	if (coord.x != dest.first) {
+		result += 1;
+	}
+	if (coord.y != dest.second) {
+		result += 1;
+	}
+	return result;
 }
 
 #pragma endregion

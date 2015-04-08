@@ -20,7 +20,7 @@ const long long upperBound = 2147483648i64;
 enum mOrient { N, R, L, U };
 
 class AstarAlgo{
-private:
+public:
 	struct Node{
 		int x;
 		int y;
@@ -44,11 +44,10 @@ private:
 			or = obj.or;
 		}
 	};
-public:
 	bool answer;
 	std::pair<int, int> Dest;
 	//For a*algorithm
-	std::function<int(const MapData&, pair<int, int>, const pair<int, int>&)> HeuristicFunc;
+	std::function<int(const MapData&, const Node&, const pair<int, int>&)> HeuristicFunc;
 	std::vector<Node> Graph;
 	std::vector<Node> Candidates;
 	std::vector<std::vector<bool>> isAccessed;
@@ -64,9 +63,9 @@ public:
 
 namespace Heuristic {
 	//int(const Mapdata&, pair<int, int>)
-	int Zero(const MapData& mapdata, pair<int, int> coord, const pair<int, int>& dest);
-	int MDistance(const MapData& mapdata, pair<int, int> coord, const pair<int, int>& dest);
-	int CostBase(const MapData& mapdata, pair<int, int> coord, const pair<int, int>& dest);
+	int Zero(const MapData& mapdata, const AstarAlgo::Node& coord, const pair<int, int>& dest);
+	int MDistance(const MapData& mapdata, const AstarAlgo::Node& coord, const pair<int, int>& dest);
+	int CostBase(const MapData& mapdata, const AstarAlgo::Node& coord, const pair<int, int>& dest);
 }
 
 class Agent {	
