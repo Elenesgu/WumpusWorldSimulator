@@ -259,6 +259,7 @@ int Heuristic::CostBase(const MapData& mapdata, pair<int, int> coord, const pair
 	if (mapdata[coord.first][coord.second] == WUMPUS) {
 		result += 10;
 	}
+	return 0;
 }
 
 #pragma endregion
