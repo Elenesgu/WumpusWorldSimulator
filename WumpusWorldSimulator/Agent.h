@@ -12,7 +12,7 @@
 #include <queue>
 #include <vector>
 
-typedef std::vector<std::vector<MapState>> MapData;
+typedef std::vector<std::vector<MapState>> MapData;   
 
 //upperBound is INT_MAX+1 (64bit integer data type must be needed)
 const long long upperBound = 2147483648i64;
@@ -44,29 +44,34 @@ public:
 			or = obj.or;
 		}
 	};
+	static mOrient table[16];
 	bool answer;
 	std::pair<int, int> Dest;
 	//For a*algorithm
-	std::function<int(const MapData&, const Node&, const pair<int, int>&)> HeuristicFunc;
-	std::vector<Node> Graph;
-	std::vector<Node> Candidates;
+	typedef std::vector<Node> NodeData;
+	std::function<int(const MapData&, const NodeData&, const Node&, const pair<int, int>&)> HeuristicFunc;
+	NodeData Graph;
+	NodeData Candidates;
 	std::vector<std::vector<bool>> isAccessed;
 	//----------------
 	std::queue<Action> ActionQue;
-	Orientation calcOrient(const Node& source, const Node& target);
 	void Compute(const MapData& mapdata, std::pair<int, int> start, std::pair<int,int> target, Orientation initorient);
 	void Compute(const MapData& mapdata, const Node& curNode, std::pair<int, int> target);
 	void MakeAction(const MapData& mapdata);
+
 	Action operator() (const MapData& mapdata,
 		Percept& percept);
+	static Orientation calcOrient(const Node& source, const Node& target);
 };
 
 namespace Heuristic {
 	//int(const Mapdata&, pair<int, int>)
-	int Zero(const MapData& mapdata, const AstarAlgo::Node& coord, const pair<int, int>& dest);
-	int MDistance(const MapData& mapdata, const AstarAlgo::Node& coord, const pair<int, int>& dest);
-	int CostBase(const MapData& mapdata, const AstarAlgo::Node& coord, const pair<int, int>& dest);
-}
+	static int Zero(const MapData& mapdata, const AstarAlgo::NodeData& graph, AstarAlgo::Node& coord, const pair<int, int>& dest);
+	static int MDistance(const MapData& mapdata, const AstarAlgo::NodeData& graph, const AstarAlgo::Node& coord, const pair<int, int>& dest);
+	static int CostBase(const MapData& mapdata, const AstarAlgo::NodeData& graph, const AstarAlgo::Node& coord, const pair<int, int>& dest);
+};
+
+
 
 class Agent {	
 private:

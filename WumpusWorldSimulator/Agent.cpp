@@ -17,6 +17,12 @@
 #include <string>
 #endif
 
+mOrient AstarAlgo::table[16] = { N, U, L, R,
+U, N, R, L,
+R, L, N, U,
+L, R, U, N
+};
+
 Agent::Agent () {
 	//Algorithm.HeuristicFunc = Heuristic::Zero;
 	//Algorithm.HeuristicFunc = Heuristic::MDistance;
@@ -80,7 +86,7 @@ void AstarAlgo::Compute(const MapData& mapdata, std::pair<int, int> start,
 	headNode.parentIndex = -1;
 	headNode.index = 0;
 	headNode.cost = 0;
-	headNode.or = initorient;
+	headNode.or = initorient; 
 	Graph.push_back(headNode);
 	Compute(mapdata, Graph[0], target);
 }
@@ -128,7 +134,7 @@ void AstarAlgo::Compute(const MapData& mapdata, const AstarAlgo::Node& curNode, 
 	long long minCost = upperBound;
 	for_each(Candidates.begin(), Candidates.end(), [this, &minNode, &mapdata, &minCost, &target](Node& n) {
 		n.or = calcOrient(Graph[n.parentIndex], n);
-		n.cost = Graph[n.parentIndex].cost + HeuristicFunc(mapdata, n, target);
+		n.cost = Graph[n.parentIndex].cost + HeuristicFunc(mapdata, Graph, n, target);
 		if (mapdata[n.x][n.y] == PIT || mapdata[n.x][n.y] == PIT_WUMPUS) {
 			n.cost += upperBound;
 		}
@@ -147,14 +153,14 @@ void AstarAlgo::Compute(const MapData& mapdata, const AstarAlgo::Node& curNode, 
 }
 
 void AstarAlgo::MakeAction(const MapData& mapdata) {
-	//Orientation converting table
-	mOrient table[16] = {N, U, L, R,
+	
+	/*mOrient table[16] = {N, U, L, R,
 		U, N, R, L,
 		R, L, N, U,
 		L, R, U, N
-	};
+	};*/
 	//Lambda for caculating action.
-	auto calcAction = [this, &table, &mapdata](const Node& source, const Node& target, Orientation& curOrient) {
+	auto calcAction = [this, &mapdata](const Node& source, const Node& target, Orientation& curOrient) {
 		auto targetOrinet = calcOrient(source, target);
 		switch (table[curOrient * 4 + targetOrinet]) {
 		case N:
@@ -180,8 +186,12 @@ void AstarAlgo::MakeAction(const MapData& mapdata) {
 	//Forward Route
 	Orientation curOrient = RIGHT;
 	Compute(mapdata, std::make_pair<int, int>(0,0),Dest, curOrient);
-	std::vector<Node> Path;
+	NodeData Path;
 	Node cur = Graph.back();
+	if (cur.x != Dest.first || cur.y != Dest.second) {
+		ActionQue.push(CLIMB);
+		return;
+	}
 	while (cur.parentIndex != -1) {
 		Path.push_back(cur);
 		cur = Graph[cur.parentIndex];
@@ -246,26 +256,35 @@ Action AstarAlgo::operator() (const MapData& mapdata,
 
 //Below is Heuristic functions.
 
-int Heuristic::Zero(const MapData& mapdata, const AstarAlgo::Node& coord, const pair<int, int>& dest) {
+int Heuristic::Zero(const MapData& mapdata, const AstarAlgo::NodeData& graph,
+		 AstarAlgo::Node& coord, const pair<int, int>& dest) {
 	return 0;
 }
 
-int Heuristic::MDistance(const MapData& mapdata, const AstarAlgo::Node& coord, const pair<int, int>& dest) {
+int Heuristic::MDistance(const MapData& mapdata, const AstarAlgo::NodeData& graph,
+		const AstarAlgo::Node& coord, const pair<int, int>& dest) {
 	return std::abs(dest.first - coord.x) + std::abs(dest.second - coord.y);
 }
 
-int Heuristic::CostBase(const MapData& mapdata, const AstarAlgo::Node& coord, const pair<int, int>& dest) {
+int Heuristic::CostBase(const MapData& mapdata, const AstarAlgo::NodeData& graph,
+		const AstarAlgo::Node& coord, const pair<int, int>& dest) {
 	int result = 0;
-
+	AstarAlgo::Node pNode = graph[coord.parentIndex];
 	if (mapdata[coord.x][coord.y] == WUMPUS) {
 		result += 10;
 	}
-	result += Heuristic::MDistance(mapdata, coord, dest);
-	if (coord.x != dest.first) {
+	result += Heuristic::MDistance(mapdata, graph, coord, dest);
+	Orientation newOr = AstarAlgo::calcOrient(pNode, coord);
+	switch (AstarAlgo::table[pNode.or * 4 + newOr]) {
+	case N:
+		break;
+	case U:
+		result += 2;
+		break;
+	case L:
+	case R:
 		result += 1;
-	}
-	if (coord.y != dest.second) {
-		result += 1;
+		break;
 	}
 	return result;
 }
