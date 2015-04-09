@@ -22,7 +22,7 @@ int main (int argc, char *argv[])
 	unsigned seed;
 	char* worldFile;
 	bool seedSet = false;
-	bool worldSet = false;//true;
+	bool worldSet = true;//true;
 	worldFile = "testworld.txt";
 
 	// Set random number generator seed

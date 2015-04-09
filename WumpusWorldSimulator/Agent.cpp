@@ -37,6 +37,8 @@ Agent::Agent () {
 		Algorithm.HeuristicFunc = Heuristic::CostBase;
 		Algorithm.ZeroBaseHeuristic = false;
 	}
+	Algorithm.maxGraphSize = 0;
+	Algorithm.funcCallNum = 0;
 	Algorithm.answer = true;
 	Algorithm.funcCallNum = 0;
 }
