@@ -46,19 +46,24 @@ public:
 	};
 	static mOrient table[16];
 	bool answer;
+	bool ZeroBaseHeuristic;
 	std::pair<int, int> Dest;
-	//For a*algorithm
+	//Variable for a*algorithm
 	typedef std::vector<Node> NodeData;
+
 	std::function<int(const MapData&, const NodeData&, const Node&, const pair<int, int>&)> HeuristicFunc;
 	NodeData Graph;
 	NodeData Candidates;
 	std::vector<std::vector<bool>> isAccessed;
-	//----------------
+	//functions-------
 	std::queue<Action> ActionQue;
 	void Compute(const MapData& mapdata, std::pair<int, int> start, std::pair<int,int> target, Orientation initorient);
 	void Compute(const MapData& mapdata, const Node& curNode, std::pair<int, int> target);
 	void MakeAction(const MapData& mapdata);
-
+	//Scoring Data
+	int funcCallNum; //Time
+	size_t maxGraphSize; //Space
+	//----------------
 	Action operator() (const MapData& mapdata,
 		Percept& percept);
 	static Orientation calcOrient(const Node& source, const Node& target);
@@ -66,9 +71,9 @@ public:
 
 namespace Heuristic {
 	//int(const Mapdata&, pair<int, int>)
-	static int Zero(const MapData& mapdata, const AstarAlgo::NodeData& graph, AstarAlgo::Node& coord, const pair<int, int>& dest);
-	static int MDistance(const MapData& mapdata, const AstarAlgo::NodeData& graph, const AstarAlgo::Node& coord, const pair<int, int>& dest);
-	static int CostBase(const MapData& mapdata, const AstarAlgo::NodeData& graph, const AstarAlgo::Node& coord, const pair<int, int>& dest);
+	int Zero(const MapData& mapdata, const AstarAlgo::NodeData& graph, AstarAlgo::Node& coord, const pair<int, int>& dest);
+	int MDistance(const MapData& mapdata, const AstarAlgo::NodeData& graph, const AstarAlgo::Node& coord, const pair<int, int>& dest);
+	int CostBase(const MapData& mapdata, const AstarAlgo::NodeData& graph, const AstarAlgo::Node& coord, const pair<int, int>& dest);
 };
 
 

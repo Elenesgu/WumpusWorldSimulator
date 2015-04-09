@@ -1,6 +1,7 @@
 // Agent.cpp
 
 #include <array>
+#include <algorithm>
 #include <cmath>
 #include <exception>
 #include <functional>
@@ -24,10 +25,20 @@ L, R, U, N
 };
 
 Agent::Agent () {
-	//Algorithm.HeuristicFunc = Heuristic::Zero;
-	//Algorithm.HeuristicFunc = Heuristic::MDistance;
-	Algorithm.HeuristicFunc = Heuristic::CostBase;
+	/*{
+		Algorithm.HeuristicFunc = Heuristic::Zero;
+		Algorithm.ZeroBaseHeuristic = true;
+	}
+	{
+		Algorithm.HeuristicFunc = Heuristic::MDistance;
+		Algorithm.ZeroBaseHeuristic = false;
+	}*/
+	{
+		Algorithm.HeuristicFunc = Heuristic::CostBase;
+		Algorithm.ZeroBaseHeuristic = false;
+	}
 	Algorithm.answer = true;
+	Algorithm.funcCallNum = 0;
 }
 
 Agent::~Agent () {
@@ -35,7 +46,6 @@ Agent::~Agent () {
 }
 
 void Agent::Initialize () {
-
 }
 
 
@@ -69,6 +79,10 @@ Action Agent::Process (Percept& percept) {
 }
 
 void Agent::GameOver (int score) {
+	cout << "Pratical Complexity: \n";
+	cout << "A* algorithm called " << Algorithm.funcCallNum << " times.\n";
+	cout << "Stored Max Node: " << Algorithm.maxGraphSize << " nodes\n";
+	cout << "\n";
 }
 
 #pragma region A*Algorithm
@@ -97,9 +111,13 @@ void AstarAlgo::Compute(const MapData& mapdata, std::pair<int, int> start,
 void AstarAlgo::Compute(const MapData& mapdata, const AstarAlgo::Node& curNode, std::pair<int, int> target) {
 	isAccessed[curNode.x][curNode.y] = true;
 	Candidates.clear();
+	//Chekc if it is final state.
 	if (curNode.x == target.first && curNode.y == target.second) {
 		return;
 	}
+	//For complexity Calc
+	funcCallNum++;
+	//--------------
 	auto checkvalid = [this](Node& obj) {
 		int maxSize = static_cast<int>(isAccessed.size());
 		if (obj.x >= 0 && obj.y >= 0 &&
@@ -135,6 +153,9 @@ void AstarAlgo::Compute(const MapData& mapdata, const AstarAlgo::Node& curNode, 
 	for_each(Candidates.begin(), Candidates.end(), [this, &minNode, &mapdata, &minCost, &target](Node& n) {
 		n.or = calcOrient(Graph[n.parentIndex], n);
 		n.cost = Graph[n.parentIndex].cost + HeuristicFunc(mapdata, Graph, n, target);
+		if (!ZeroBaseHeuristic) {
+			n.cost -= Heuristic::MDistance(mapdata, Graph, n, target);
+		}
 		if (mapdata[n.x][n.y] == PIT || mapdata[n.x][n.y] == PIT_WUMPUS) {
 			n.cost += upperBound;
 		}
@@ -185,7 +206,7 @@ void AstarAlgo::MakeAction(const MapData& mapdata) {
 	}
 	//Forward Route
 	Orientation curOrient = RIGHT;
-	Compute(mapdata, std::make_pair<int, int>(0,0),Dest, curOrient);
+	Compute(mapdata, std::make_pair<int, int>(0,0), Dest, curOrient);
 	NodeData Path;
 	Node cur = Graph.back();
 	if (cur.x != Dest.first || cur.y != Dest.second) {
@@ -201,7 +222,10 @@ void AstarAlgo::MakeAction(const MapData& mapdata) {
 		calcAction(Path[index + 1], Path[index], curOrient);
 	}
 	ActionQue.push(GRAB);
-
+	//For complexity Calc
+	maxGraphSize = Graph.size();
+	//--------------
+	
 	//Back route
 	Compute(mapdata, Dest, std::make_pair<int, int>(0, 0), curOrient);
 	Path.clear();
@@ -214,6 +238,10 @@ void AstarAlgo::MakeAction(const MapData& mapdata) {
 	for (int index = Path.size() - 2; index >= 0; index--) {
 		calcAction(Path[index + 1], Path[index], curOrient);
 	}
+	//For complexity Calc
+	maxGraphSize = std::max<size_t>(maxGraphSize, Graph.size());
+	//--------------
+
 	ActionQue.push(CLIMB);
 }
 
