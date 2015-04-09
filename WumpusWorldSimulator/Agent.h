@@ -71,7 +71,7 @@ public:
 
 namespace Heuristic {
 	//int(const Mapdata&, pair<int, int>)
-	int Zero(const MapData& mapdata, const AstarAlgo::NodeData& graph, AstarAlgo::Node& coord, const pair<int, int>& dest);
+	int Zero(const MapData& mapdata, const AstarAlgo::NodeData& graph,const  AstarAlgo::Node& coord, const pair<int, int>& dest);
 	int MDistance(const MapData& mapdata, const AstarAlgo::NodeData& graph, const AstarAlgo::Node& coord, const pair<int, int>& dest);
 	int CostBase(const MapData& mapdata, const AstarAlgo::NodeData& graph, const AstarAlgo::Node& coord, const pair<int, int>& dest);
 };

@@ -287,7 +287,7 @@ Action AstarAlgo::operator() (const MapData& mapdata,
 //Below is Heuristic functions.
 
 int Heuristic::Zero(const MapData& mapdata, const AstarAlgo::NodeData& graph,
-		 AstarAlgo::Node& coord, const pair<int, int>& dest) {
+		const AstarAlgo::Node& coord, const pair<int, int>& dest) {
 	return 0;
 }
 
