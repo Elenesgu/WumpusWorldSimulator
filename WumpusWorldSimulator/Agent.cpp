@@ -139,6 +139,10 @@ Coord2 Agent::FindNextDest() {
 Action Agent::Process (Percept& percept) {
 	Action action;
 	if (ended) {
+		if (actionQueue.empty()){
+			action = CLIMB;
+			return action;
+		}
 		action = actionQueue.front();
 		actionQueue.pop_front();
 		return action;
@@ -156,10 +160,22 @@ Action Agent::Process (Percept& percept) {
 			Coord2 NextDest = FindNextDest();
 			if (NextDest.x == -1 || NextDest.y == -1) {
 				//모험을 한다.
+
+				//모험 실패
 				NextDest = Coord2(0, 0);
+				ended = true;
+				actionQueue = algoMethod(KB.mapData, curPosition, NextDest, curOrient);
+				if (actionQueue.empty()) {
+					action = CLIMB;
+				}
 			}
-			actionQueue = algoMethod(KB.mapData, curPosition, NextDest, curOrient);
+			else {
+				actionQueue = algoMethod(KB.mapData, curPosition, NextDest, curOrient);
+			}
 		}
+
+		action = actionQueue.front();
+		actionQueue.pop_front();
 		return action;
 	}
 }
@@ -185,8 +201,7 @@ std::deque<Action> AstarAlgo::operator()(const AstarAlgo::MapData& mapdata,
 			throw std::exception("코딩 다시해");
 		}
 	}
-	int a = 3;
-	return std::deque<Action>();
+	return MakeAction(mapdata);
 }
 
 void AstarAlgo::Compute(const MapData& mapdata, Coord2 start,
@@ -260,65 +275,40 @@ void AstarAlgo::Compute(const MapData& mapdata, const AstarAlgo::Node& curNode, 
 	Compute(mapdata, *minNode, target);
 }
 
-void AstarAlgo::MakeAction(const MapData& mapdata) {
+std::deque<Action> AstarAlgo::MakeAction(const MapData& mapdata) {
 
-	///*mOrient table[16] = {N, U, L, R,
-	//U, N, R, L,
-	//R, L, N, U,
-	//L, R, U, N
-	//};*/
-	////Lambda for caculating action.
-	//auto calcAction = [this, &mapdata](const Node& source, const Node& target, Orientation& curOrient) {
-	//	auto targetOrinet = calcOrient(source, target);
-	//	switch (table[curOrient * 4 + targetOrinet]) {
-	//	case N:
-	//		break;
-	//	case U:
-	//		ActionQue.push(TURNLEFT); ActionQue.push(TURNLEFT); break;
-	//	case L:
-	//		ActionQue.push(TURNLEFT); break;
-	//	case R:
-	//		ActionQue.push(TURNRIGHT); break;
-	//	}
-	//	curOrient = targetOrinet;
-	//};
-	//Compute(mapdata, std::make_pair<int, int>(0, 0), Dest, curOrient);
-	//NodeData Path;
-	//Node cur = Graph.back();
-	//if (cur.x != Dest.first || cur.y != Dest.second) {
-	//	ActionQue.push(CLIMB);
-	//	return;
-	//}
-	//while (cur.parentIndex != -1) {
-	//	Path.push_back(cur);
-	//	cur = Graph[cur.parentIndex];
-	//}
-	//Path.push_back(cur);
-	//for (int index = Path.size() - 2; index >= 0; index--) {
-	//	calcAction(Path[index + 1], Path[index], curOrient);
-	//}
-	//ActionQue.push(GRAB);
-	////For complexity Calc
-	//maxGraphSize = Graph.size();
-	////--------------
-
-	////Back route
-	//Compute(mapdata, Dest, std::make_pair<int, int>(0, 0), curOrient);
-	//Path.clear();
-	//cur = Graph.back();
-	//while (cur.parentIndex != -1) {
-	//	Path.push_back(cur);
-	//	cur = Graph[cur.parentIndex];
-	//}
-	//Path.push_back(cur);
-	//for (int index = Path.size() - 2; index >= 0; index--) {
-	//	calcAction(Path[index + 1], Path[index], curOrient);
-	//}
-	////For complexity Calc
-	//maxGraphSize = std::max<size_t>(maxGraphSize, Graph.size());
-	////--------------
-
-	//ActionQue.push(CLIMB);
+	/*mOrient table[16] = {N, U, L, R,
+	U, N, R, L,
+	R, L, N, U,
+	L, R, U, N
+	};*/
+	//Lambda for caculating action.
+	auto calcAction = [this, &mapdata](const Node& source, const Node& target, Orientation& curOrient) {
+		auto targetOrinet = calcOrient(source, target);
+		switch (table[curOrient * 4 + targetOrinet]) {
+		case N:
+			break;
+		case U:
+			ActionQue.push_back(TURNLEFT); ActionQue.push_back(TURNLEFT); break;
+		case L:
+			ActionQue.push_back(TURNLEFT); break;
+		case R:
+			ActionQue.push_back(TURNRIGHT); break;
+		}
+		ActionQue.push_back(FORWARD);
+		curOrient = targetOrinet;
+	};
+	NodeData Path;
+	Node cur = Graph.back();
+	while (cur.parentIndex != -1) {
+		Path.push_back(cur);
+		cur = Graph[cur.parentIndex];
+	}
+	Path.push_back(cur);
+	for (int index = Path.size() - 2; index >= 0; index--) {
+		calcAction(Path[index + 1], Path[index], cur.or);
+	}
+	return ActionQue;
 }
 
 Orientation AstarAlgo::calcOrient(const Node& source, const Node& target) {

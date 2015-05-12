@@ -88,15 +88,12 @@ public:
 	NodeData Graph;
 	NodeData Candidates;
 	std::vector<std::vector<bool>> isAccessed;
+	W
 	//functions-------
-	std::queue<Action> ActionQue;
+	std::deque<Action> ActionQue;
 	void Compute(const MapData& mapdata, Coord2 start, Coord2 target, Orientation initorient);
 	void Compute(const MapData& mapdata, const Node& curNode, Coord2 target);
-	void MakeAction(const MapData& mapdata);
-	//Scoring Data
-	int funcCallNum; //Time
-	size_t maxGraphSize; //Space
-	//----------------
+	std::deque<Action> MakeAction(const MapData& mapdata);
 	std::deque<Action> operator() (const AstarAlgo::MapData& mapdata, const Coord2& origin, const Coord2& dest, Orientation initori);
 	static Orientation calcOrient(const Node& source, const Node& target);
 	AstarAlgo();
