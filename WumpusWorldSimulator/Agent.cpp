@@ -167,6 +167,7 @@ Coord2 Agent::FindNextWumpus() {
 	for (auto var : records[0]) {
 		candidate.push_back(var);
 	}
+	/* °íÃÄ¾ß´ï*/
 	for (int i = 1; i < 4; i++) {
 		for (auto& var1 : candidate) {
 			for (auto& var2 : records[i]) {
