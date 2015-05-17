@@ -20,8 +20,10 @@ struct Coord2 {
 	Coord2(int ax, int ay);
 	Coord2(const Coord2& obj);
 	static bool CheckValid(const Coord2& obj);
+	
 };
 
+bool operator==(const Coord2& f, const Coord2& s);
 typedef std::vector<Coord2> _coordlist;
 
 class Knowledge {
@@ -88,7 +90,6 @@ public:
 	NodeData Graph;
 	NodeData Candidates;
 	std::vector<std::vector<bool>> isAccessed;
-	W
 	//functions-------
 	std::deque<Action> ActionQue;
 	void Compute(const MapData& mapdata, Coord2 start, Coord2 target, Orientation initorient);
@@ -101,15 +102,20 @@ public:
 
 class Agent {
 private:
+	bool arrow;
 	bool ended;
 	Knowledge KB;
 	Coord2 curPosition;
+	Coord2 wumpusPosition;
 	Orientation curOrient;
 
 	std::deque<Action> actionQueue;
 
 	Coord2 FindNextDest();
+	Coord2 FindNextWumpus();
+	Coord2 FindRandomDest(float T);
 	AstarAlgo algoMethod;
+	void UpdateState(Action action);
 public:
 	const static int defaultSize = 5;
 

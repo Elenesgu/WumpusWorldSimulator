@@ -1,6 +1,8 @@
 // Agent.cpp
 
 #include <iostream>
+#include <array>
+#include <list>
 #include <queue>
 #include <vector>
 #include "Agent.h"
@@ -22,6 +24,10 @@ Coord2::Coord2(const Coord2& obj) : Coord2(obj.x, obj.y) {
 
 bool Coord2::CheckValid(const Coord2& obj) {
 	return obj.x >= 0 && obj.y >= 0 && obj.x < Agent::defaultSize && obj.y < Agent::defaultSize;
+}
+
+bool operator==(const Coord2& f, const Coord2& s) {
+	return f.x == s.x && f.y == f.y;
 }
 
 #pragma region Knowledge
@@ -62,32 +68,28 @@ void Knowledge::UpdateBase(const Coord2& obj) {
 	Node& base = mapData[obj.x][obj.y];
 	Coord2 nCoord;
 	if (!base.percept.Stench) {
-		for (int x = -1; x <= 1; x += 2) {
-			nCoord.x = obj.x + x;
+		for (int i = -1; i <= 1; i += 2) {
+			nCoord.x = obj.x + i;
 			nCoord.y = obj.y;
 			if (Coord2::CheckValid(nCoord)) {
 				mapData[nCoord.x][nCoord.y].wumpus = false;
 			}
-		}
-		for (int y = -1; y <= 1; y += 2){
 			nCoord.x = obj.x;
-			nCoord.y = obj.y + y;
+			nCoord.y = obj.y + i;
 			if (Coord2::CheckValid(nCoord)) {
 				mapData[nCoord.x][nCoord.y].wumpus = false;
 			}
 		}
 	}
 	if (!base.percept.Breeze) {
-		for (int x = -1; x <= 1; x += 2) {
-			nCoord.x = obj.x + x;
+		for (int i = -1; i <= 1; i += 2) {
+			nCoord.x = obj.x + i;
 			nCoord.y = obj.y;
 			if (Coord2::CheckValid(nCoord)) {
 				mapData[nCoord.x][nCoord.y].pitfall = false;
 			}
-		}
-		for (int y = -1; y <= 1; y += 2){
 			nCoord.x = obj.x;
-			nCoord.y = obj.y + y;
+			nCoord.y = obj.y + i;
 			if (Coord2::CheckValid(nCoord)) {
 				mapData[nCoord.x][nCoord.y].pitfall = false;
 			}
@@ -119,6 +121,9 @@ void Agent::Initialize() {
 	curPosition = Coord2(0, 0);
 	curOrient = RIGHT;
 	ended = false;
+	arrow = true;
+	KB.mapData[0][0].wumpus = false;
+	KB.mapData[0][0].pitfall = false;
 }
 
 void Agent::Initialize(int worldSize, MapState* map) {
@@ -133,6 +138,53 @@ Coord2 Agent::FindNextDest() {
 			}
 		}
 	}
+	return Coord2(-1, -1);
+}
+
+Coord2 Agent::FindNextWumpus() {
+	std::array<std::array<Coord2, 4U>, 4U> records;
+	std::list<Coord2> candidate;
+	size_t index = 0;
+	size_t subindex = 0;
+	Coord2 nCoord;
+	for (const auto& col : KB.mapData) {
+		for (auto var : col) {
+			if (var.percept.Breeze) {
+				size_t subindex = 0;
+				for (int i = -1; i <= 1; i += 2) {
+					nCoord.x = var.coord.x + i;
+					nCoord.y = var.coord.y;
+					records[index][subindex++] = nCoord;
+
+					nCoord.x = var.coord.x;
+					nCoord.y = var.coord.y + i;
+					records[index][subindex++] = nCoord;
+				}
+				index++;
+			}
+		}
+	}
+	for (auto var : records[0]) {
+		candidate.push_back(var);
+	}
+	for (int i = 1; i < 4; i++) {
+		for (auto& var1 : candidate) {
+			for (auto& var2 : records[i]) {
+				if (!(var1 == var2)) {
+					candidate.remove(var1);
+				}
+			}
+		}
+	}
+	if (candidate.size() == 1) {
+		return candidate.front();
+	}
+	else {
+		return Coord2(-1, -1);
+	}
+}
+
+Coord2 Agent::FindRandomDest(float T) {
 	return Coord2(-1, -1);
 }
 
@@ -151,22 +203,42 @@ Action Agent::Process (Percept& percept) {
 		if (percept.Glitter) {
 			action = GRAB;
 			ended = true;
+			actionQueue = algoMethod(KB.mapData, curPosition, Coord2(0, 0), curOrient);
+			return action;
 		}
 		else {
 			KB.GetPercept(curPosition, percept);
 		}
 
+		if (percept.Scream) {
+			actionQueue.push_front(FORWARD);
+		}
+
 		if (actionQueue.empty()){
 			Coord2 NextDest = FindNextDest();
-			if (NextDest.x == -1 || NextDest.y == -1) {
-				//모험을 한다.
+			if (!Coord2::CheckValid(NextDest)) {
+				//Wumpus를 찾는다.
+				if (arrow) {
+					NextDest = FindNextWumpus();
+					if (Coord2::CheckValid(NextDest)) {
+						//Wumpus찾음
+						wumpusPosition = NextDest;
+						actionQueue = algoMethod(KB.mapData, curPosition, NextDest, curOrient);
+						actionQueue.pop_back();
+					}
+				}
 
-				//모험 실패
-				NextDest = Coord2(0, 0);
-				ended = true;
-				actionQueue = algoMethod(KB.mapData, curPosition, NextDest, curOrient);
-				if (actionQueue.empty()) {
-					action = CLIMB;
+				//Wumpus 못찾음 or 화살 이미 씀
+				//위험한 곳 도전
+
+				//위험한곳 도전 실패
+				{
+					NextDest = Coord2(0, 0);
+					ended = true;
+					actionQueue = algoMethod(KB.mapData, curPosition, NextDest, curOrient);
+					if (actionQueue.empty()){
+						actionQueue.push_front(CLIMB);
+					}
 				}
 			}
 			else {
@@ -176,7 +248,67 @@ Action Agent::Process (Percept& percept) {
 
 		action = actionQueue.front();
 		actionQueue.pop_front();
+		UpdateState(action);
 		return action;
+	}
+}
+
+void Agent::UpdateState(Action action) {	
+	switch (action) {
+	case FORWARD:
+		switch (curOrient) {
+		case UP:
+			curPosition.x += 1;
+			break;
+		case DOWN:
+			curPosition.x -= 1;
+			break;
+		case LEFT:
+			curPosition.y -= 1;
+			break;
+		case RIGHT:
+			curPosition.y += 1;
+			break;
+		}
+		break;
+	case TURNLEFT:
+		switch (curOrient) {
+		case UP:
+			curOrient = LEFT;
+			break;
+		case DOWN:
+			curOrient = RIGHT;
+			break;
+		case LEFT:
+			curOrient = DOWN;
+			break;
+		case RIGHT:
+			curOrient = UP;
+			break;
+		}
+		break;
+	case TURNRIGHT:
+		switch (curOrient) {
+		case UP:
+			curOrient = RIGHT;
+			break;
+		case DOWN:
+			curOrient = LEFT;
+			break;
+		case LEFT:
+			curOrient = UP;
+			break;
+		case RIGHT:
+			curOrient = DOWN;
+			break;
+		}
+		break;
+	case SHOOT:
+		arrow = false;
+		break;
+	default:
+		break;
+		//Not to do
 	}
 }
 
@@ -209,7 +341,7 @@ void AstarAlgo::Compute(const MapData& mapdata, Coord2 start,
 
 	isAccessed = std::vector<std::vector<bool>>(mapdata.size(),
 		std::vector<bool>(mapdata.size(), false));
-
+	ActionQue.clear();
 	Graph.clear();
 	Node headNode;
 	headNode.x = start.x;

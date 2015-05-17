@@ -16,7 +16,7 @@ using namespace std;
 
 int main (int argc, char *argv[])
 {
-	int worldSize = 4;
+	int worldSize = 5;
 	int numTrials = 1;
 	int numTries = 1;
 	unsigned seed;
