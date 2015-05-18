@@ -1,6 +1,7 @@
 // Agent.cpp
 
 #include <iostream>
+#include <climits>
 #include <array>
 #include <list>
 #include <queue>
@@ -230,8 +231,12 @@ Coord2 Agent::FindRandomDest(float T) {
 
 		}
 		//Pick the lowest point's node
+		int minValue = std::numeric_limits<int>::max();
 		for (auto& var : adjacentCoord) {
-
+			if (var.second < minValue) {
+				minValue = var.second;
+				nCoord = var.first;
+			}
 		}
 		//return
 		return nCoord;
