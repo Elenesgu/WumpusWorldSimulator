@@ -4,7 +4,9 @@
 #include <array>
 #include <list>
 #include <queue>
+#include <random>
 #include <vector>
+#include <set>
 #include "Agent.h"
 
 AstarAlgo::mOrient AstarAlgo::table[16] = { N, U, L, R,
@@ -28,6 +30,10 @@ bool Coord2::CheckValid(const Coord2& obj) {
 
 bool operator==(const Coord2& f, const Coord2& s) {
 	return f.x == s.x && f.y == f.y;
+}
+
+bool operator<(const Coord2& f, const Coord2& s) {
+	return f.x + f.y < s.x + s.y;
 }
 
 #pragma region Knowledge
@@ -55,6 +61,7 @@ Knowledge::Node::Node(const Node& obj) : Node(obj.coord) {
 Knowledge::Knowledge() : Knowledge(Agent::defaultSize) {
 }
 Knowledge::Knowledge(int size) {
+	discoverd = 0;
 	mapData = _mapdata(size, _mapcol(size));
 	for (int x = 0; x < size; x++) {
 		for (int y = 0; y < size; y++) {
@@ -100,6 +107,7 @@ void Knowledge::UpdateBase(const Coord2& obj) {
 
 void Knowledge::GetPercept(const Coord2& coord, Percept p) {
 	if (!mapData[coord.x][coord.y].isVisited) {
+		discoverd++;
 		mapData[coord.x][coord.y].percept = p;
 		mapData[coord.x][coord.y].isVisited = true;
 		UpdateBase(coord);
@@ -110,7 +118,7 @@ void Knowledge::GetPercept(const Coord2& coord, Percept p) {
 
 #pragma region Agent
 Agent::Agent () {
-
+	Initialize();
 }
 
 Agent::~Agent () {
@@ -142,43 +150,47 @@ Coord2 Agent::FindNextDest() {
 }
 
 Coord2 Agent::FindNextWumpus() {
-	std::array<std::array<Coord2, 4U>, 4U> records;
-	std::list<Coord2> candidate;
-	size_t index = 0;
-	size_t subindex = 0;
+	std::vector<std::vector<Coord2>> records;
+	std::set<Coord2> candidate, ncandidate;
 	Coord2 nCoord;
 	for (const auto& col : KB.mapData) {
 		for (auto var : col) {
-			if (var.percept.Breeze) {
-				size_t subindex = 0;
+			if (var.percept.Stench) {
+				std::vector<Coord2> localrecord;
 				for (int i = -1; i <= 1; i += 2) {
 					nCoord.x = var.coord.x + i;
 					nCoord.y = var.coord.y;
-					records[index][subindex++] = nCoord;
+					localrecord.push_back(nCoord);
 
 					nCoord.x = var.coord.x;
 					nCoord.y = var.coord.y + i;
-					records[index][subindex++] = nCoord;
+					localrecord.push_back(nCoord);
 				}
-				index++;
+				records.push_back(localrecord);
 			}
 		}
 	}
-	for (auto var : records[0]) {
-		candidate.push_back(var);
+	if (records.size() <= 1) {
+		return Coord2(-1, -1);
 	}
-	/* 고쳐야댐*/
-	for (int i = 1; i < 4; i++) {
-		for (auto& var1 : candidate) {
-			for (auto& var2 : records[i]) {
-				if (!(var1 == var2)) {
-					candidate.remove(var1);
+	for (auto var : records[0]) {
+		ncandidate.insert(var);
+	}
+	for (auto& localrecord : records) {
+		for (auto var : ncandidate) {
+			candidate.insert(var);
+		}
+		ncandidate.clear();
+		for (auto var : localrecord) {
+			for (auto origin : candidate) {
+				if (var == origin) {
+					ncandidate.insert(var);
 				}
 			}
 		}
 	}
 	if (candidate.size() == 1) {
-		return candidate.front();
+		return *candidate.begin();
 	}
 	else {
 		return Coord2(-1, -1);
@@ -186,7 +198,47 @@ Coord2 Agent::FindNextWumpus() {
 }
 
 Coord2 Agent::FindRandomDest(float T) {
-	return Coord2(-1, -1);
+	float temperature;
+	temperature = std::exp(-(1.0/T));
+	std::mt19937 gen(std::random_device{}());
+	std::uniform_real_distribution<float> range(0.0, 1.0);
+	if (range(gen) < temperature) {
+		const Knowledge::_mapdata& record = KB.mapData;
+		std::vector<std::pair<Coord2, int>> adjacentCoord;
+		Coord2 nCoord;
+		//Find all adjacent nodes;
+		for (const auto& col : record) {
+			for (const auto& var : col) {
+				for (int i = -1; i <= 1; i += 2) {
+					nCoord.x = var.coord.x;
+					nCoord.y = var.coord.y + i;
+					if (Coord2::CheckValid(nCoord) && !record[nCoord.x][nCoord.y].isVisited) {
+						adjacentCoord.push_back(make_pair(nCoord, 0));
+					}
+
+					nCoord.x = var.coord.x + i;
+					nCoord.y = var.coord.y;
+					if (Coord2::CheckValid(nCoord) && !record[nCoord.x][nCoord.y].isVisited) {
+						adjacentCoord.push_back(make_pair(nCoord, 0));
+					}
+				}
+			}
+		}
+		//Calculate danger point of each adjacent node
+		{
+
+
+		}
+		//Pick the lowest point's node
+		for (auto& var : adjacentCoord) {
+
+		}
+		//return
+		return nCoord;
+	}
+	else {
+		return Coord2(-1, -1);
+	}
 }
 
 Action Agent::Process (Percept& percept) {
@@ -231,9 +283,12 @@ Action Agent::Process (Percept& percept) {
 
 				//Wumpus 못찾음 or 화살 이미 씀
 				//위험한 곳 도전
+				if (!Coord2::CheckValid(NextDest)) {
+					NextDest = FindRandomDest(static_cast<float>(KB.discoverd));
+				}
 
-				//위험한곳 도전 실패
-				{
+				//위험한 곳 도전 실패
+				if (!Coord2::CheckValid(NextDest)) {
 					NextDest = Coord2(0, 0);
 					ended = true;
 					actionQueue = algoMethod(KB.mapData, curPosition, NextDest, curOrient);

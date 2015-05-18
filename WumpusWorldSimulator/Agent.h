@@ -24,6 +24,7 @@ struct Coord2 {
 };
 
 bool operator==(const Coord2& f, const Coord2& s);
+bool operator<(const Coord2& f, const Coord2& s);
 typedef std::vector<Coord2> _coordlist;
 
 class Knowledge {
@@ -42,6 +43,7 @@ public:
 
 	typedef std::vector<Node>  _mapcol;
 	typedef std::vector<_mapcol> _mapdata;
+	size_t discoverd;
 	_mapdata mapData;
 private:
 	void UpdateBase(const Coord2& obj);
