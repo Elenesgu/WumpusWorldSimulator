@@ -1,13 +1,19 @@
 // Agent.cpp
 
 #include <iostream>
+#include <algorithm>
+#include <cmath>
 #include <climits>
 #include <array>
 #include <list>
 #include <queue>
+#include <deque>
 #include <random>
 #include <vector>
 #include <set>
+#include <functional>
+#include <exception>
+#include <memory>
 #include "Agent.h"
 
 AstarAlgo::mOrient AstarAlgo::table[16] = { N, U, L, R,
@@ -34,7 +40,7 @@ bool operator==(const Coord2& f, const Coord2& s) {
 }
 
 bool operator<(const Coord2& f, const Coord2& s) {
-	return f.x + f.y < s.x + s.y;
+	return f.x + 5 * f.y < s.x + 5 * s.y;
 }
 
 #pragma region Knowledge
@@ -42,6 +48,7 @@ Knowledge::Node::Node() : Node(Coord2(-1, -1)){
 	isVisited = false;
 	pitfall = true;
 	wumpus = true;
+	percept.SetPercept(false, false, false, false, false);
 }
 Knowledge::Node::Node(int ax, int ay) : Node(Coord2(ax, ay)) {
 
@@ -130,6 +137,7 @@ void Agent::Initialize() {
 	curPosition = Coord2(0, 0);
 	curOrient = RIGHT;
 	ended = false;
+	kill = false;
 	arrow = true;
 	KB.mapData[0][0].wumpus = false;
 	KB.mapData[0][0].pitfall = false;
@@ -139,15 +147,35 @@ void Agent::Initialize(int worldSize, MapState* map) {
 	Initialize();
 }
 
-Coord2 Agent::FindNextDest() {
+std::vector<Coord2> Agent::FindSafeNode() {
+	std::vector<Coord2> safeNodes;
 	for (const Knowledge::_mapcol& col : KB.mapData) {
 		for (Knowledge::Node var : col) {
-			if (!var.isVisited && !var.wumpus && !var.pitfall) {
-				return var.coord;
+			if (!var.wumpus && !var.pitfall) {
+				safeNodes.push_back(var.coord);
 			}
 		}
 	}
-	return Coord2(-1, -1);
+	return safeNodes;
+}
+
+Coord2 Agent::FindNextDest(const std::vector<Coord2>& safeList) {
+	Coord2 nCoord;
+	int minVal = numeric_limits<int>().max();
+	int val;
+	for (auto& var : safeList) {
+		if (!KB.mapData[var.x][var.y].isVisited) {
+			val = std::abs(var.x - curPosition.x) + std::abs(var.y - curPosition.y);
+			if (minVal > val) {
+				minVal = val;
+				nCoord = var;
+			}
+		}
+	}
+	if (minVal == numeric_limits<int>().max()) {
+		return Coord2(-1, -1);
+	}
+	return nCoord;
 }
 
 Coord2 Agent::FindNextWumpus() {
@@ -171,7 +199,20 @@ Coord2 Agent::FindNextWumpus() {
 			}
 		}
 	}
-	if (records.size() <= 1) {
+	if (records.size() == 0) {
+		return Coord2(-1, -1);
+	}
+	if (records.size() == 1) {
+		int count = 0;
+		for (auto var : records[0]) {
+			if (Coord2::CheckValid(var) && !KB.mapData[var.x][var.y].wumpus) {
+				count++;
+				nCoord = var;
+			}
+		}
+		if (count == 1) {
+			return nCoord;
+		}
 		return Coord2(-1, -1);
 	}
 	for (auto var : records[0]) {
@@ -184,16 +225,30 @@ Coord2 Agent::FindNextWumpus() {
 		ncandidate.clear();
 		for (auto var : localrecord) {
 			for (auto origin : candidate) {
-				if (var == origin) {
+				if (Coord2::CheckValid(var) && Coord2::CheckValid(origin)
+					&& var == origin) {
 					ncandidate.insert(var);
 				}
 			}
 		}
 	}
-	if (candidate.size() == 1) {
+	if (ncandidate.size() == 1) {
 		return *candidate.begin();
 	}
 	else {
+		int count = 0;
+		for (auto var : ncandidate) {
+			if (!KB.mapData[var.x][var.y].wumpus) {
+				count++;
+			}
+		}
+		if (count == 1) {
+			for (auto var : ncandidate) {
+				if (KB.mapData[var.x][var.y].wumpus) {
+					return var;
+				}
+			}
+		}
 		return Coord2(-1, -1);
 	}
 }
@@ -203,43 +258,79 @@ Coord2 Agent::FindRandomDest(float T) {
 	temperature = std::exp(-(1.0/T));
 	std::mt19937 gen(std::random_device{}());
 	std::uniform_real_distribution<float> range(0.0, 1.0);
+	//임시
 	if (range(gen) < temperature) {
 		const Knowledge::_mapdata& record = KB.mapData;
 		std::vector<std::pair<Coord2, int>> adjacentCoord;
+		std::vector<std::vector<bool>> checkList(record.size(), std::vector<bool>(record.size(), false));
 		Coord2 nCoord;
 		//Find all adjacent nodes;
 		for (const auto& col : record) {
 			for (const auto& var : col) {
-				for (int i = -1; i <= 1; i += 2) {
-					nCoord.x = var.coord.x;
-					nCoord.y = var.coord.y + i;
-					if (Coord2::CheckValid(nCoord) && !record[nCoord.x][nCoord.y].isVisited) {
-						adjacentCoord.push_back(make_pair(nCoord, 0));
-					}
+				if (record[var.coord.x][var.coord.y].isVisited) {
+					for (int i = -1; i <= 1; i += 2) {
+						nCoord.x = var.coord.x;
+						nCoord.y = var.coord.y + i;
+						if (Coord2::CheckValid(nCoord) && !record[nCoord.x][nCoord.y].isVisited
+							&& !checkList[nCoord.x][nCoord.y]) {
+							adjacentCoord.push_back(make_pair(nCoord, 0));
+							checkList[nCoord.x][nCoord.y] = true;
+						}
 
-					nCoord.x = var.coord.x + i;
-					nCoord.y = var.coord.y;
-					if (Coord2::CheckValid(nCoord) && !record[nCoord.x][nCoord.y].isVisited) {
-						adjacentCoord.push_back(make_pair(nCoord, 0));
+						nCoord.x = var.coord.x + i;
+						nCoord.y = var.coord.y;
+						if (Coord2::CheckValid(nCoord) && !record[nCoord.x][nCoord.y].isVisited
+							&& !checkList[nCoord.x][nCoord.y]) {
+							adjacentCoord.push_back(make_pair(nCoord, 0));
+							checkList[nCoord.x][nCoord.y] = true;
+						}
 					}
 				}
 			}
 		}
 		//Calculate danger point of each adjacent node
-		{
+		for (auto& var : adjacentCoord) {
+			for (int i = -1; i < 2; i += 2) {
+				nCoord.x = var.first.x + i;
+				nCoord.y = var.first.y;
+				if (Coord2::CheckValid(nCoord)) {
+					if (KB.mapData[nCoord.x][nCoord.y].percept.Breeze) {
+						var.second++;
+					}
+					if (KB.mapData[nCoord.x][nCoord.y].percept.Stench) {
+						var.second++;
+					}
+				}
 
+				nCoord.x = var.first.x;
+				nCoord.y = var.first.y + i;
 
+				if (Coord2::CheckValid(nCoord)) {
+					if (KB.mapData[nCoord.x][nCoord.y].percept.Breeze) {
+						var.second++;
+					}
+					if (KB.mapData[nCoord.x][nCoord.y].percept.Stench) {
+						var.second++;
+					}
+				}
+			}
 		}
 		//Pick the lowest point's node
 		int minValue = std::numeric_limits<int>::max();
+		std::vector<Coord2> minCoords;
 		for (auto& var : adjacentCoord) {
 			if (var.second < minValue) {
 				minValue = var.second;
-				nCoord = var.first;
+				minCoords.clear();
+				minCoords.push_back(var.first);
+			}
+			else if (var.second == minValue) {
+				minCoords.push_back(var.first);
 			}
 		}
+		std::shuffle(minCoords.begin(), minCoords.end(), std::mt19937(std::random_device{}()));
 		//return
-		return nCoord;
+		return minCoords[0];
 	}
 	else {
 		return Coord2(-1, -1);
@@ -248,6 +339,18 @@ Coord2 Agent::FindRandomDest(float T) {
 
 Action Agent::Process (Percept& percept) {
 	Action action;
+	KB.mapData[curPosition.x][curPosition.y].wumpus = false;
+	KB.mapData[curPosition.x][curPosition.y].pitfall = false;
+	if (kill) {
+		KB.mapData[curPosition.x][curPosition.y].wumpus = false;
+		for (auto& col : KB.mapData) {
+			for (auto& var : col){
+				var.percept.Breeze = false;
+				var.wumpus = false;
+			}
+		}
+		kill = false;
+	}
 	if (ended) {
 		if (actionQueue.empty()){
 			action = CLIMB;
@@ -270,10 +373,12 @@ Action Agent::Process (Percept& percept) {
 
 		if (percept.Scream) {
 			actionQueue.push_front(FORWARD);
+			kill = true;
 		}
 
 		if (actionQueue.empty()){
-			Coord2 NextDest = FindNextDest();
+			safeNodes = FindSafeNode();
+			Coord2 NextDest = FindNextDest(safeNodes);
 			if (!Coord2::CheckValid(NextDest)) {
 				//Wumpus를 찾는다.
 				if (arrow) {
@@ -285,6 +390,7 @@ Action Agent::Process (Percept& percept) {
 					wumpusPosition = NextDest;
 					actionQueue = algoMethod(KB.mapData, curPosition, NextDest, curOrient);
 					actionQueue.pop_back();
+					actionQueue.push_back(SHOOT);
 				} //Wumpus 못찾음 or 화살 이미 씀
 				else {
 					//랜덤 탐색
@@ -316,7 +422,8 @@ Action Agent::Process (Percept& percept) {
 	}
 }
 
-void Agent::UpdateState(Action action) {	
+void Agent::UpdateState(Action action) {
+	PrintCoordVector(safeNodes);
 	switch (action) {
 	case FORWARD:
 		switch (curOrient) {
@@ -375,8 +482,15 @@ void Agent::UpdateState(Action action) {
 	}
 }
 
-void Agent::GameOver (int score) {
+void Agent::GameOver(int score) {
+	PrintCoordVector(safeNodes);
+}
 
+void Agent::PrintCoordVector(const std::vector<Coord2>& list) {
+	for (auto& var : list) {
+		cout << '(' << var.x << ',' << var.y << ')' << ' ';
+	}
+	cout << endl;
 }
 #pragma endregion
 
@@ -455,7 +569,9 @@ void AstarAlgo::Compute(const MapData& mapdata, const AstarAlgo::Node& curNode, 
 		n.or = calcOrient(Graph[n.parentIndex], n);
 		n.cost = Graph[n.parentIndex].cost + Heuristic::CostBase(mapdata, Graph, n, target);
 		if (mapdata[n.x][n.y].pitfall || mapdata[n.x][n.y].wumpus) {
-			n.cost += upperBound;
+			if (!(n.x == target.x && n.y == target.y)) {
+				n.cost += upperBound;
+			}
 		}
 		if (n.cost < minCost) {
 			minCost = n.cost;

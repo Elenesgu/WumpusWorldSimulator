@@ -106,18 +106,22 @@ class Agent {
 private:
 	bool arrow;
 	bool ended;
+	bool kill;
 	Knowledge KB;
 	Coord2 curPosition;
 	Coord2 wumpusPosition;
 	Orientation curOrient;
 
 	std::deque<Action> actionQueue;
+	std::vector<Coord2> safeNodes;
 
-	Coord2 FindNextDest();
+	std::vector<Coord2> FindSafeNode();
+	Coord2 FindNextDest(const std::vector<Coord2>& safeList);
 	Coord2 FindNextWumpus();
 	Coord2 FindRandomDest(float T);
 	AstarAlgo algoMethod;
 	void UpdateState(Action action);
+	static void PrintCoordVector(const std::vector<Coord2>& list);
 public:
 	const static int defaultSize = 5;
 
