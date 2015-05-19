@@ -16,7 +16,7 @@ using namespace std;
 
 int main (int argc, char *argv[])
 {
-	int worldSize = 4;
+	int worldSize = 5;
 	int numTrials = 1;
 	int numTries = 1;
 	unsigned seed;
@@ -61,7 +61,8 @@ int main (int argc, char *argv[])
 		for (int tries = 1; tries <= numTries; tries++)
 		{
 			wumpusWorld->Initialize();
-			agent->Initialize(wumpusWorld->currentState.worldSize, wumpusWorld->initialMap);
+			//agent->Initialize(wumpusWorld->currentState.worldSize, wumpusWorld->initialMap);
+			agent->Initialize();
 			numMoves = 0;
 			cout << "Trial " << trial << ", Try " << tries << " begin" << endl << endl;
 			while ((! wumpusWorld->GameOver()) && (numMoves < MAX_MOVES_PER_GAME))
