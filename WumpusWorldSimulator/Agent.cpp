@@ -278,27 +278,29 @@ Action Agent::Process (Percept& percept) {
 				//Wumpus를 찾는다.
 				if (arrow) {
 					NextDest = FindNextWumpus();
-					if (Coord2::CheckValid(NextDest)) {
-						//Wumpus찾음
-						wumpusPosition = NextDest;
-						actionQueue = algoMethod(KB.mapData, curPosition, NextDest, curOrient);
-						actionQueue.pop_back();
-					}
 				}
 
-				//Wumpus 못찾음 or 화살 이미 씀
-				//위험한 곳 도전
-				if (!Coord2::CheckValid(NextDest)) {
-					NextDest = FindRandomDest(static_cast<float>(KB.discoverd));
-				}
-
-				//위험한 곳 도전 실패
-				if (!Coord2::CheckValid(NextDest)) {
-					NextDest = Coord2(0, 0);
-					ended = true;
+				//wumpus찾음
+				if(Coord2::CheckValid(NextDest)) {
+					wumpusPosition = NextDest;
 					actionQueue = algoMethod(KB.mapData, curPosition, NextDest, curOrient);
-					if (actionQueue.empty()){
-						actionQueue.push_front(CLIMB);
+					actionQueue.pop_back();
+				} //Wumpus 못찾음 or 화살 이미 씀
+				else {
+					//랜덤 탐색
+					NextDest = FindRandomDest(static_cast<float>(KB.discoverd));
+
+					//위험한 곳 도전 실패
+					if (!Coord2::CheckValid(NextDest)) {
+						NextDest = Coord2(0, 0);
+						ended = true;
+						actionQueue = algoMethod(KB.mapData, curPosition, NextDest, curOrient);
+						if (actionQueue.empty()){
+							actionQueue.push_front(CLIMB);
+						}
+					} //도전성공
+					else {
+						actionQueue = algoMethod(KB.mapData, curPosition, NextDest, curOrient);
 					}
 				}
 			}
